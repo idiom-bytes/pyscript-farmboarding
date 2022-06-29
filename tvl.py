@@ -1,7 +1,7 @@
-from pprint import pprint
+# from pprint import pprint
 
-from examples.utils import networkutil, oceanutil
-from examples.utils.graphutil import submitQuery
+# from examples.utils import networkutil, oceanutil
+# from examples.utils.graphutil import submitQuery
 
 # TODO - embed/glue the logic here and just output a TVL value
 CHAIN_IDS = [1, 56, 137, 246, 1285]
@@ -32,5 +32,6 @@ def report():
         """ % (
         DT
     )
-    result = submitQuery(query, 137)
-    pprint(result)
+    # result = submitQuery(query, 137)
+    # pprint(result)
+    print("Hello World")
