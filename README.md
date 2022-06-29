@@ -48,11 +48,15 @@
        #       #    # #    # #    # #####   ####  #    # #    # #####   ####
 
 #### Prerequisites
-You can double click on .html to run standalone apps.
+```
+Python3
+```
+
+You can double click on .html that are standalone apps.
 However if your html imports from local, you need to run from a local server w/ python3.
 
-#### Running
-Inside root folder, start server and go to `http://0.0.0.0:8000/tvl.html`
+#### Running & accessing pages
+Inside root folder, start server and navigate to `http://0.0.0.0:8000/tvl.html`
 ```
 > python3 -m http.server
 Serving HTTP on 0.0.0.0 port 8000 (http://0.0.0.0:8000/)
