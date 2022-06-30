@@ -1,5 +1,5 @@
 import requests
-from examples.utils import networkutil
+import networkutil
 
 def submitQuery(query: str, chainID: int) -> dict:
     subgraph_url = networkutil.chainIdToSubgraphUri(chainID)

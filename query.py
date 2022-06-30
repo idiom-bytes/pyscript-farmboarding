@@ -4,10 +4,9 @@ from typing import Dict, List, Tuple
 import requests
 from enforce_typing import enforce_types
 
-from examples.utils import oceanutil
-from examples.utils.blockrange import BlockRange
-from examples.utils.constants import BROWNIE_PROJECT as B
-from examples.utils.graphutil import submitQuery
+import oceanutil
+from blockrange import BlockRange
+from graphutil import submitQuery
 
 @enforce_types
 class SimplePool:
@@ -21,24 +20,25 @@ class SimplePool:
         self,
         addr: str,
         nft_addr: str,
+        nft_addr_chcksm: str,
         DT_addr: str,
         DT_symbol: str,
         basetoken_addr: str,
+        basetoken_symbol: str,
     ):
         self.addr = addr
         self.nft_addr = nft_addr
+        self.nft_addr_chcksm = nft_addr_chcksm
         self.DT_addr = DT_addr
         self.DT_symbol = DT_symbol
         self.basetoken_addr = basetoken_addr
-
-    @property
-    def basetoken_symbol(self) -> str:
-        return symbol(self.basetoken_addr)
+        self.basetoken_symbol = basetoken_symbol
 
     def __str__(self):
         s = ["SimplePool={"]
         s += [f"addr={self.addr[:5]}"]
         s += [f", nft_addr={self.nft_addr[:5]}"]
+        s += [f", nft_addr_chcksm={self.nft_addr_chcksm[:5]}"]
         s += [f", DT_addr={self.DT_addr[:5]}"]
         s += [f", DT_symbol={self.DT_symbol}"]
         s += [f", basetoken_addr={self.basetoken_addr[:5]}"]
@@ -78,8 +78,10 @@ def getPools(chainID: int) -> list:
       pools -- list of SimplePool
     """
     pools = getAllPools(chainID)
+
     # TODO - Purgatory depends on brownie
     # pools = _filterOutPurgatory(pools, chainID)
+
     return pools
 
 
@@ -94,7 +96,7 @@ def getStakes(pools: list, rng: BlockRange, chainID: int) -> dict:
     """
     print("getStakes(): begin")
     _ = pools  # little trick because pools isn't used
-    SSBOT_address = oceanutil.Staking().address.lower()
+    SSBOT_address = oceanutil.Staking(chainID).lower()
     stakes: Dict[str, Dict[str, Dict[str, float]]] = {}
     n_blocks = rng.numBlocks()
     n_blocks_sampled = 0
@@ -256,26 +258,28 @@ def getDTVolumes(
     return DTvols  # ie DTvols_at_chain
 
 
-# TODO - Purgatory relies on brownie
-# @enforce_types
-# def _filterOutPurgatory(pools: List[SimplePool], chainID: int) -> List[SimplePool]:
-#     """
-#     @description
-#       Return pools that aren't in purgatory
-#
-#     @arguments
-#       pools -- list of SimplePool
-#
-#     @return
-#       filtered_pools -- list of SimplePool
-#     """
-#     bad_dids = _didsInPurgatory()
-#     filtered_pools = [
-#         pool
-#         for pool in pools
-#         if oceanutil.calcDID(pool.nft_addr, chainID) not in bad_dids
-#     ]
-#     return filtered_pools
+# TODO - Purgatory relies on brownie.
+# For DID + purgatory to work, it depends on calculating the checksummed addy
+# However, the nft addy from pool is already the checksummed address
+@enforce_types
+def _filterOutPurgatory(pools: List[SimplePool], chainID: int) -> List[SimplePool]:
+    """
+    @description
+      Return pools that aren't in purgatory
+
+    @arguments
+      pools -- list of SimplePool
+
+    @return
+      filtered_pools -- list of SimplePool
+    """
+    bad_dids = _didsInPurgatory()
+    filtered_pools = [
+        pool
+        for pool in pools
+        if oceanutil.calcDID(pool.nft_addr, chainID) not in bad_dids
+    ]
+    return filtered_pools
 
 
 @enforce_types
@@ -297,6 +301,7 @@ def _didsInPurgatory() -> List[str]:
     return dids
 
 
+# DONE - Modify query/logic to deprecate Brownie dependency
 @enforce_types
 def getApprovedTokens(chainID: int) -> Dict[str, str]:
     """
@@ -306,11 +311,20 @@ def getApprovedTokens(chainID: int) -> Dict[str, str]:
     @return
       d - dict of [token_addr] : token_symbol
     """
-    query = "{ opcs{approvedTokens} }"
+    query = """
+        {
+          opcs {
+            approvedTokens {
+              address
+              symbol
+            }
+          }
+        }
+        """
     result = submitQuery(query, chainID)
-    addrs = result["data"]["opcs"][0]["approvedTokens"]
-    d = {addr.lower(): B.Simpletoken.at(addr).symbol().upper() for addr in addrs}
-    assert len(addrs) == len(set(d.values())), "symbols not unique, eek"
+    tokens = result["data"]["opcs"][0]["approvedTokens"]
+    d = {token.address.lower() : token.symbol.upper() for token in tokens}
+    assert len(tokens) == len(set(d.values())), "symbols not unique, eek"
     for _symbol in d.values():
         assert _symbol == _symbol.upper(), "symbols should be uppercase"
     return d
@@ -337,6 +351,7 @@ def getAllPools(chainID: int) -> List[SimplePool]:
             id,
             baseToken {
               id
+              symbol
             },
             datatoken {
                 id,
@@ -363,23 +378,26 @@ def getAllPools(chainID: int) -> List[SimplePool]:
             pool = SimplePool(
                 addr=d["id"].lower(),
                 nft_addr=d["datatoken"]["nft"]["id"].lower(),
+                nft_addr_chcksm=d["datatoken"]["nft"]["id"],
                 DT_addr=d["datatoken"]["id"].lower(),
                 DT_symbol=d["datatoken"]["symbol"].upper(),
                 basetoken_addr=d["baseToken"]["id"].lower(),
+                basetoken_symbol=d["baseToken"]["symbol"].lower(),
             )
             pools.append(pool)
 
     return pools
 
 
-_ADDR_TO_SYMBOL = {}  # address : TOKEN_symbol
-
-
-def symbol(addr: str):
-    """Returns token symbol, given its address."""
-    global _ADDR_TO_SYMBOL
-    if addr not in _ADDR_TO_SYMBOL:
-        _symbol = B.Simpletoken.at(addr).symbol()
-        _symbol = _symbol.upper()  # follow lower-upper rules
-        _ADDR_TO_SYMBOL[addr] = _symbol
-    return _ADDR_TO_SYMBOL[addr]
+# TODO - Replace w/ only known/queried results from GQL
+# TODO - Deprecating due to Brownie dependency
+# _ADDR_TO_SYMBOL = {}  # address : TOKEN_symbol
+#
+# def symbol(addr: str):
+#     """Returns token symbol, given its address."""
+#     global _ADDR_TO_SYMBOL
+#     if addr not in _ADDR_TO_SYMBOL:
+#         _symbol = B.Simpletoken.at(addr).symbol()
+#         _symbol = _symbol.upper()  # follow lower-upper rules
+#         _ADDR_TO_SYMBOL[addr] = _symbol
+#     return _ADDR_TO_SYMBOL[addr]

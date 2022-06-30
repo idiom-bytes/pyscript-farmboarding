@@ -1,16 +1,14 @@
 import json
-import hashlib
 
 from enforce_typing import enforce_types
 
-from examples.utils import networkutil
-from examples.utils.constants import CONTRACTS
+import networkutil
+from constants import CONTRACTS
 
 @enforce_types
 def _contracts(chainID: int, key: str) -> str:
     """Returns the contract object at the currently connected network"""
     return CONTRACTS[chainID][key]
-
 
 @enforce_types
 def recordDevDeployedContracts(chainID: int):
@@ -71,19 +69,20 @@ def Staking(chainID: int):
 def ERC721Factory(chainID: int):
     return _contracts(chainID, "ERC721Factory")
 
+# TODO - Used in purgatory. Reliant on Brownie. NFT addy from poolShares is already checksummed
 @enforce_types
 def calcDID(nft_addr: str, chainID: int) -> str:
-    nft_addr2 = brownie.web3.toChecksumAddress(nft_addr)
-
-    # adapted from ocean.py/ocean_lib/ocean/ocean_assets.py
-    did = f"did:op:{create_checksum(nft_addr2 + str(chainID))}"
-    return did
-
-
-# from ocean.py/ocean_lib/utils/utilities.py
-@enforce_types
-def create_checksum(text: str) -> str:
-    """
-    :return: str
-    """
-    return hashlib.sha256(text.encode("utf-8")).hexdigest()
+#     nft_addr2 = brownie.web3.toChecksumAddress(nft_addr)
+#
+#     # adapted from ocean.py/ocean_lib/ocean/ocean_assets.py
+#     did = f"did:op:{create_checksum(nft_addr2 + str(chainID))}"
+    return "did"
+#
+#
+# # from ocean.py/ocean_lib/utils/utilities.py
+# @enforce_types
+# def create_checksum(text: str) -> str:
+#     """
+#     :return: str
+#     """
+#     return hashlib.sha256(text.encode("utf-8")).hexdigest()
