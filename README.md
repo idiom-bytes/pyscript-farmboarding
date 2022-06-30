@@ -55,9 +55,8 @@ Python3
 You can double click on .html that are standalone apps.
 However if your html imports from local, you need to run from a local server w/ python3.
 
-#### Running & accessing pages
-Inside root folder, start server and navigate to `http://0.0.0.0:8000/tvl.html`
+#### Running locally & detached
+Inside root folder, start server and navigate to `http://127.0.0.1:9000/examples/`
 ```
-> python3 -m http.server
-Serving HTTP on 0.0.0.0 port 8000 (http://0.0.0.0:8000/)
+> nohup python3 -m http.server --bind 127.0.0.1 9000 &
 ```
