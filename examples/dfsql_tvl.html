@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <title>dfSQL TVL</title>
+        <link rel="stylesheet" href="https://pyscript.net/alpha/pyscript.css" />
+        <script defer src="https://pyscript.net/alpha/pyscript.js"></script>
+    </head>
+    <body>
+        <h1>Pool info requested from dfSQL prod DB</h1>
+        <div id="request_output"></div>
+
+    <py-script>
+from pyodide.http import pyfetch
+import asyncio
+import json
+
+db_url = "https://df-sql.oceandao.org/pools"
+response = await pyfetch(
+        url=db_url,
+        method='POST'
+)
+
+output = f"GET request=> status:{response.status}, json:{await response.json()}"
+
+print(f"{output}")
+    </py-script>
+    </body>
+</html>
