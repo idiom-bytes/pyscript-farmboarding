@@ -4,9 +4,9 @@ from typing import Dict, List, Tuple
 import requests
 from enforce_typing import enforce_types
 
-import oceanutil
-from blockrange import BlockRange
-from graphutil import submitQuery
+from dfpy import oceanutil
+from dfpy.blockrange import BlockRange
+from dfpy.graphutil import submitQuery
 
 @enforce_types
 class SimplePool:

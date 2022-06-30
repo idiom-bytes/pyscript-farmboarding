@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <title>Total Value Locked</title>
+        <link rel="stylesheet" href="https://pyscript.net/alpha/pyscript.css" />
+        <script defer src="https://pyscript.net/alpha/pyscript.js"></script>
+    </head>
+    <body>
+        <h1>HTTP Requests via pyfetch</h1>
+        <div id="request_output"></div>
+
+    <py-script>
+from pyodide.http import pyfetch
+import asyncio
+import json
+
+subgraph_url = "https://v4.subgraph.polygon.oceanprotocol.com/subgraphs/name/oceanprotocol/ocean-subgraph"
+query = """
+        {
+          orders(first:1000) {
+            id,
+            datatoken {
+              id
+            }
+            lastPriceToken,
+            lastPriceValue
+            estimatedUSDValue,
+            block
+          }
+        }
+        """
+
+response = await pyfetch(
+        url=subgraph_url,
+        method='POST',
+        body=json.dumps({"query": query})
+)
+
+output = f"GET request=> status:{response.status}, json:{await response.json()}"
+
+print(f"{output}")
+    </py-script>
+    </body>
+</html>

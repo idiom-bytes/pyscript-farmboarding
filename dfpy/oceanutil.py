@@ -2,8 +2,8 @@ import json
 
 from enforce_typing import enforce_types
 
-import networkutil
-from constants import CONTRACTS
+from dfpy import networkutil
+from dfpy.constants import CONTRACTS
 
 @enforce_types
 def _contracts(chainID: int, key: str) -> str:

@@ -1,5 +1,6 @@
 import requests
-import networkutil
+from dfpy import networkutil
+
 
 def submitQuery(query: str, chainID: int) -> dict:
     subgraph_url = networkutil.chainIdToSubgraphUri(chainID)

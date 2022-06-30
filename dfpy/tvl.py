@@ -1,7 +1,7 @@
 # from pprint import pprint
 #
 # import networkutil, oceanutil, csvs, query
-from graphutil import submitQuery
+from dfpy.graphutil import submitQuery
 
 # TODO - embed/glue the logic here and just output a TVL value
 # CHAIN_IDS = [1, 56, 137, 246, 1285]
