@@ -1,0 +1,132 @@
+<html>
+  <head>
+    <title>Total Value Locked</title>
+    <meta charset="utf-8">
+    <link rel="icon" type="image/x-icon" href="./favicon.png">
+    <link rel="stylesheet" href="https://pyscript.net/alpha/pyscript.css" />
+    <script defer src="https://pyscript.net/alpha/pyscript.js"></script>
+  </head>
+  <body>
+    <h1>HTTP Requests via pyfetch</h1>
+    <div id="request_output"></div>
+
+    <b>V4 Marketplace TVL</b>
+    <py-script>
+#pyodide does not support requests
+#https://blog.devgenius.io/pyscript-making-http-requests-best-approach-tutorial-8ae062438335
+from pyodide.http import pyfetch
+import asyncio
+import json
+
+CHAIN_IDS = [1, 56, 137, 246, 1285]
+
+_CHAINID_TO_NETWORK = {
+    8996: "development",  # ganache
+    1: "mainnet",
+    3: "ropsten",
+    4: "rinkeby",
+    56: "bsc",
+    137: "polygon",
+    246: "energyweb",
+    1285: "moonriver",
+    1287: "moonbase",
+    80001: "mumbai",
+}
+
+def chainIdToNetwork(chainID):
+    """Returns the network name for a given chainID"""
+    return _CHAINID_TO_NETWORK[chainID]
+
+def chainIdToSubgraphUri(chainID):
+    """Returns the subgraph URI for a given chainID"""
+    sg = "/subgraphs/name/oceanprotocol/ocean-subgraph"
+    network_str = chainIdToNetwork(chainID)
+    return f"https://v4.subgraph.{network_str}.oceanprotocol.com" + sg
+
+async def submitQuery(query, chainID):
+    """Submits GQL query to subgraph"""
+    subgraph_url = chainIdToSubgraphUri(chainID)
+    response = await pyfetch(
+        url=subgraph_url,
+        method='POST',
+        body=json.dumps({"query": query})
+    )
+    return response
+
+async def getOrders():
+  orders = {}
+  for chainID in CHAIN_IDS :
+    query = """
+        {
+          orders(first:1000) {
+            id,
+            datatoken {
+              id
+            }
+            lastPriceToken,
+            lastPriceValue
+            estimatedUSDValue,
+            block
+          }
+        }
+        """
+    response = await submitQuery(query, chainID)
+    orders[chainID] = await response.json()
+  return orders
+
+async def getAllData():
+  pools = {}
+  for chainID in CHAIN_IDS:
+    query = """ {
+	pools(
+        first: 1000
+      ) {
+        id
+        baseTokenLiquidity
+        totalShares
+        isFinalized
+        shares(
+          orderBy: shares
+          orderDirection: desc
+        ){
+          user {
+            id
+          }
+          shares
+        }
+        datatoken{
+          id
+          orderCount
+          holderCount
+          orders(
+            orderBy: createdTimestamp
+            orderDirection: desc
+          ) {
+            lastPriceValue
+            createdTimestamp
+          }
+        }
+        transactions(
+          orderBy: timestamp
+          orderDirection: desc
+        ) {
+          type
+          timestamp
+          baseTokenValue
+        }
+      }
+    }"""
+    response = await submitQuery(query, chainID)
+    data = await response.json()
+
+    pools[chainID] = data['data']
+  return pools
+
+async def main():
+  allData = await getAllData()
+  print(f"{allData}")
+
+main()
+    </py-script>
+  </body>
+</html>
