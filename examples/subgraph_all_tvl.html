@@ -33,19 +33,19 @@ _CHAINID_TO_NETWORK = {
     80001: "mumbai",
 }
 
-def chainIdToNetwork(chainID):
-    """Returns the network name for a given chainID"""
-    return _CHAINID_TO_NETWORK[chainID]
+def chainIdToNetwork(chainId):
+    """Returns the network name for a given chainId"""
+    return _CHAINID_TO_NETWORK[chainId]
 
-def chainIdToSubgraphUri(chainID):
-    """Returns the subgraph URI for a given chainID"""
+def chainIdToSubgraphUri(chainId):
+    """Returns the subgraph URI for a given chainId"""
     sg = "/subgraphs/name/oceanprotocol/ocean-subgraph"
-    network_str = chainIdToNetwork(chainID)
+    network_str = chainIdToNetwork(chainId)
     return f"https://v4.subgraph.{network_str}.oceanprotocol.com" + sg
 
-async def submitQuery(query, chainID):
+async def submitQuery(query, chainId):
     """Submits GQL query to subgraph"""
-    subgraph_url = chainIdToSubgraphUri(chainID)
+    subgraph_url = chainIdToSubgraphUri(chainId)
     response = await pyfetch(
         url=subgraph_url,
         method='POST',
@@ -53,73 +53,64 @@ async def submitQuery(query, chainID):
     )
     return response
 
-async def getOrders():
-  orders = {}
-  for chainID in CHAIN_IDS :
-    query = """
-        {
-          orders(first:1000) {
-            id,
-            datatoken {
-              id
-            }
-            lastPriceToken,
-            lastPriceValue
-            estimatedUSDValue,
-            block
-          }
-        }
-        """
-    response = await submitQuery(query, chainID)
-    orders[chainID] = await response.json()
-  return orders
-
 async def getAllData():
   pools = {}
-  for chainID in CHAIN_IDS:
-    query = """ {
-	pools(
+  for chainId in CHAIN_IDS:
+    for epoch in range(4) :
+      skip = 1000 * epoch if epoch > 0 else 0
+      query = """ {
+      pools(
         first: 1000
       ) {
-        id
-        baseTokenLiquidity
-        totalShares
-        isFinalized
-        shares(
-          orderBy: shares
-          orderDirection: desc
-        ){
-          user {
-            id
-          }
-          shares
-        }
-        datatoken{
           id
-          orderCount
-          holderCount
-          orders(
-            orderBy: createdTimestamp
+          baseTokenLiquidity
+          totalShares
+          isFinalized
+          shares(
+            orderBy: shares
+            orderDirection: desc
+          ){
+            user {
+              id
+            }
+            shares
+          }
+          datatoken{
+            id
+            orderCount
+            holderCount
+            orders(
+              skip: %(skip)s
+              orderBy: createdTimestamp
+              orderDirection: desc
+            ) {
+              lastPriceValue
+              createdTimestamp
+            }
+          }
+          transactions(
+            skip: %(skip)s
+            orderBy: timestamp
             orderDirection: desc
           ) {
-            lastPriceValue
-            createdTimestamp
+            tx
+            user {
+              id
+            }
+            sharesTransferAmount
+            type
+            timestamp
+            baseTokenValue
           }
         }
-        transactions(
-          orderBy: timestamp
-          orderDirection: desc
-        ) {
-          type
-          timestamp
-          baseTokenValue
-        }
-      }
-    }"""
-    response = await submitQuery(query, chainID)
-    data = await response.json()
+      }""" % {'skip': skip}
+      response = await submitQuery(query, chainId)
+      data = await response.json()
 
-    pools[chainID] = data['data']
+      if not chainId in pools:
+        pools[chainId] = {}
+
+      pools[chainId][epoch] = data['data']
   return pools
 
 async def main():
